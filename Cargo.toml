@@ -1,0 +1,55 @@
+[package]
+name = "cobox"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gpui = "0.2.2"
+futures = "0.3"
+image = { version = "0.25", default-features = false, features = ["png"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+
+[target.'cfg(windows)'.dependencies]
+raw-window-handle = "0.6"
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_Security",
+  "Win32_System_Com",
+  "Win32_System_DataExchange",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_Registry",
+  "Win32_System_Threading",
+  "Win32_System_Time",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+# Fast day-to-day builds: `cargo run`. Our code builds quickly, dependencies are optimized once.
+[profile.dev]
+opt-level = 1
+debug = false
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+panic = "abort"
+strip = true
+
+# Smallest/fastest binary for daily use (slow to build): `cargo build --profile dist`
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+
+# GPUI with two small fixes (see vendor/gpui/PATCHES.md): right-to-left text and fxc.exe lookup.
+[patch.crates-io]
+gpui = { path = "vendor/gpui" }
