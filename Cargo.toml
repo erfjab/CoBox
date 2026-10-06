@@ -9,6 +9,9 @@ futures = "0.3"
 image = { version = "0.25", default-features = false, features = ["png"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3.0"
+
 [target.'cfg(windows)'.dependencies]
 raw-window-handle = "0.6"
 windows = { version = "0.61", features = [

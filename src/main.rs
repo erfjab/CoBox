@@ -31,10 +31,18 @@ const LIGHT: Theme = Theme { bg: 0xfbfbfc, panel: 0xf2f2f4, fg: 0x1a1a1f, dim: 0
 const ACCENTS: [[u32; 6]; 5] = [
     [0xffbe0b, 0xffbe0b, 0x8c6b13, 0x111111, 0x3a321a, 0xfff8e7], // amber
     [0xfb5607, 0xfb5607, 0xce4a0b, 0x111111, 0x3a2219, 0xffeee6], // flame
-    [0xff006e, 0xff006e, 0xe80266, 0x111111, 0x3b1428, 0xffe6f0], // rose (default)
+    [0xff006e, 0xff006e, 0xe80266, 0x111111, 0x3b1428, 0xffe6f0], // rose
     [0x8338ec, 0x9e66ee, 0x8338ec, 0xffffff, 0x281d3b, 0xf3ebfd], // violet
-    [0x3a86ff, 0x3a86ff, 0x3370d1, 0x111111, 0x1d293f, 0xebf3ff], // azure
+    [0x3a86ff, 0x3a86ff, 0x3370d1, 0x111111, 0x1d293f, 0xebf3ff], // azure (default)
 ];
+
+/// The CoBox logo (three stacked clips) in the accent color, `h` px tall.
+fn mark(h: f32, color: u32) -> gpui::Div {
+    let k = h / 144.;
+    let bar = |w: f32, bh: f32, o: f32| div().w(px(w * k)).h(px(bh * k)).rounded(px(bh * k / 3.5)).bg(rgb(color)).opacity(o);
+    div().flex_none().flex().flex_col().items_center().gap(px(12. * k))
+        .child(bar(112., 28., 0.3)).child(bar(132., 32., 0.6)).child(bar(152., 60., 1.))
+}
 
 const CATS: [&str; 5] = ["all", "text", "link", "media", "file"];
 const DAYS: [&str; 7] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -58,7 +66,7 @@ const SETTINGS: [(&str, &str); 8] = [
     ("text size", "size"),
     ("dim screen", "dim"),
 ];
-const DEFAULTS: [usize; 8] = [0, 2, 0, 0, 0, 0, 1, 1];
+const DEFAULTS: [usize; 8] = [0, 4, 0, 0, 0, 0, 1, 1];
 
 fn options(row: usize) -> Vec<&'static str> {
     match row {
@@ -449,8 +457,17 @@ fn ymd(z: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + (m <= 2) as i64, m, d)
 }
 
+/// History and settings live here; installs and updates never touch it.
 fn data_dir() -> PathBuf {
-    std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir).join("cobox")
+    let var = |k: &str| std::env::var_os(k).map(PathBuf::from);
+    let base = if cfg!(windows) {
+        var("APPDATA")
+    } else if cfg!(target_os = "macos") {
+        var("HOME").map(|h| h.join("Library/Application Support"))
+    } else {
+        var("XDG_DATA_HOME").or_else(|| var("HOME").map(|h| h.join(".local/share")))
+    };
+    base.unwrap_or_else(std::env::temp_dir).join("cobox")
 }
 
 // ─────────────────────────────── view ───────────────────────────────
@@ -477,6 +494,8 @@ impl Render for CoBox {
             // ── prompt + categories ──
             .child(
                 div().h(px(40.)).flex_none().flex().items_center().gap(px(8.)).px(px(14.))
+                    .child(mark(self.fs() + 2., a[0]))
+                    .child(div().font_weight(FontWeight::BOLD).child("cobox"))
                     .child(div().text_color(rgb(atext)).font_weight(FontWeight::BOLD).child("❯"))
                     .child(
                         div().flex_1().min_w_0().flex().items_center().overflow_hidden()

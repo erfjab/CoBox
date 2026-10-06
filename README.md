@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.svg" width="96" alt="CoBox logo"></p>
+
 # CoBox
 
 A small, keyboard-first clipboard history for Windows.
@@ -7,13 +9,33 @@ A small, keyboard-first clipboard history for Windows.
 - Runs in the background and starts with Windows.
 - Uses almost no CPU while idle.
 
-## Requirements
+## Install
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/erfjab/CoBox/master/install.ps1 | iex
+```
+
+macOS and Linux:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/erfjab/CoBox/master/install.sh | sh
+```
+
+The same command installs CoBox the first time and updates it later. It only replaces
+the program: your history and settings are never touched. If the download fails, the
+installed version is left as it was.
+
+## Build from source
+
+### Requirements
 
 - Windows 10 or 11
 - [Rust](https://rustup.rs) with the MSVC toolchain
 - Windows 10/11 SDK (install it with the Visual Studio Build Tools)
 
-## Install
+### Build and install
 
 Open PowerShell in the project folder and run:
 
