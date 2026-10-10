@@ -2,22 +2,25 @@
 //! CoBox — a tiny, keyboard-first clipboard history that lives in the background.
 
 mod store;
+/// Platform layer: clipboard, global hotkey, paste, startup. Same functions on every OS.
 #[cfg(windows)]
-mod win;
+#[path = "win.rs"]
+mod sys;
 #[cfg(not(windows))]
-#[path = "stub.rs"]
-mod win;
+#[path = "unix.rs"]
+mod sys;
 
 use futures::StreamExt;
 use gpui::{
-    App, Application, Bounds, ClickEvent, Context, FocusHandle, FontWeight, HighlightStyle, KeyDownEvent, MouseButton,
-    MouseDownEvent, ObjectFit, ScrollStrategy, SharedString, StyledText, Task, TextRun, UniformListScrollHandle, Window,
-    WindowAppearance, WindowBounds, WindowKind, WindowOptions, div, img, prelude::*, px, rgb, size, uniform_list,
+    App, Application, Bounds, ClickEvent, Context, Entity, FocusHandle, FontWeight, HighlightStyle, KeyDownEvent, MouseButton,
+    MouseDownEvent, ObjectFit, ScrollStrategy, SharedString, StyledText, Subscription, Task, TextRun, UniformListScrollHandle,
+    Window, WindowAppearance, WindowBounds, WindowHandle, WindowKind, WindowOptions, div, img, prelude::*, px, rgb, size,
+    uniform_list,
 };
 use std::{path::PathBuf, sync::atomic::Ordering, time::Duration};
 use store::{Item, Kind, Store, human};
 
-const FONT: &str = "Cascadia Mono";
+const FONT: &str = if cfg!(windows) { "Cascadia Mono" } else if cfg!(target_os = "macos") { "Menlo" } else { "DejaVu Sans Mono" };
 const W: f32 = 640.;
 const H: f32 = 460.;
 
@@ -60,7 +63,7 @@ const SETTINGS: [(&str, &str); 8] = [
     ("theme", "theme"),
     ("primary", "accent"),
     ("open with", "hotkey"),
-    ("start with windows", "autostart"),
+    (if cfg!(windows) { "start with windows" } else { "start at login" }, "autostart"),
     ("keep history", "keep"),
     ("skip passwords", "private"),
     ("text size", "size"),
@@ -72,7 +75,7 @@ fn options(row: usize) -> Vec<&'static str> {
     match row {
         0 => THEMES.to_vec(),
         1 => vec![""; ACCENTS.len()],
-        2 => win::HOTKEYS.iter().map(|h| h.0).collect(),
+        2 => sys::HOTKEYS.iter().map(|h| h.0).collect(),
         3 | 5 => ONOFF.to_vec(),
         4 => KEEP.iter().map(|k| k.0).collect(),
         6 => vec!["12", "13", "14"],
@@ -106,19 +109,15 @@ struct CoBox {
     tz: i64,
     focus: FocusHandle,
     scroll: UniformListScrollHandle,
+    /// The open window. On Windows it lives for the whole run and is hidden/shown; elsewhere
+    /// hiding closes it and the next toggle opens a fresh one (Linux has no hidden windows).
+    window: Option<WindowHandle<CoBox>>,
+    _subs: Vec<Subscription>,
 }
 
 impl CoBox {
-    fn new(store: Store, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    fn new(store: Store, cx: &mut Context<Self>) -> Self {
         let focus = cx.focus_handle();
-        let hwnd = win::hwnd_of(window);
-        // Never quit: closing (Alt+F4) or clicking elsewhere just hides it.
-        window.on_window_should_close(cx, move |_, _| { win::hide(hwnd); false });
-        cx.observe_window_activation(window, |this, window, _| {
-            if !window.is_window_active() { win::hide(this.hwnd) }
-        }).detach();
-        cx.observe_window_appearance(window, |_, _, cx| cx.notify()).detach();
-
         let prefs: [usize; 8] = std::array::from_fn(|i| {
             store.get(&format!("s.{}", SETTINGS[i].1)).and_then(|v| v.parse().ok()).unwrap_or(DEFAULTS[i])
         });
@@ -129,13 +128,28 @@ impl CoBox {
             query: String::new(), cat: 0, sel: 0, wide: false, settings: None,
             prefs, dark: true,
             toast: None, _toast_timer: None, undo: None,
-            hwnd, prev: 0, tz: win::utc_offset(),
+            hwnd: 0, prev: 0, tz: sys::utc_offset(),
             focus, scroll: UniformListScrollHandle::new(),
+            window: None, _subs: vec![],
         };
         for row in [2, 3, 4, 5, 7] { this.apply(row) }
         this.items = this.store.all();
         this.refilter();
         this
+    }
+
+    /// Hook up a newly opened window.
+    fn attach(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.hwnd = sys::hwnd_of(window);
+        let hwnd = self.hwnd;
+        // Never quit: closing (Alt+F4) or clicking elsewhere just hides it.
+        window.on_window_should_close(cx, move |_, cx| hide_window(hwnd, cx));
+        self._subs = vec![
+            cx.observe_window_activation(window, |this, window, cx| {
+                if !window.is_window_active() { this.hide(window, cx) }
+            }),
+            cx.observe_window_appearance(window, |_, _, cx| cx.notify()),
+        ];
     }
 
     fn t(&self) -> &'static Theme { if self.dark { &DARK } else { &LIGHT } }
@@ -157,8 +171,8 @@ impl CoBox {
     /// Side effects of a setting (the rest is read at render time).
     fn apply(&mut self, row: usize) {
         match row {
-            2 => win::set_hotkey(self.prefs[2]),
-            3 => win::autostart(self.prefs[3] == 0),
+            2 => sys::set_hotkey(self.prefs[2]),
+            3 => sys::autostart(self.prefs[3] == 0),
             4 => {
                 let days = KEEP[self.prefs[4]].1;
                 if days > 0 {
@@ -170,8 +184,8 @@ impl CoBox {
                     self.refilter();
                 }
             }
-            5 => win::SKIP_PRIVATE.store(self.prefs[5] == 0, Ordering::Relaxed),
-            7 => win::DIM_ALPHA.store(DIM[self.prefs[7]].1, Ordering::Relaxed),
+            5 => sys::SKIP_PRIVATE.store(self.prefs[5] == 0, Ordering::Relaxed),
+            7 => sys::DIM_ALPHA.store(DIM[self.prefs[7]].1, Ordering::Relaxed),
             _ => {}
         }
     }
@@ -245,44 +259,43 @@ impl CoBox {
 
     // ─────────────── show / hide ───────────────
 
-    fn toggle(&mut self, window: &mut Window) {
-        if window.is_window_active() {
-            win::hide(self.hwnd);
-            return;
-        }
-        self.prev = win::foreground();
+    /// `prev` is the window (or app) that was in front, where Enter pastes.
+    fn show(&mut self, prev: isize, window: &mut Window) {
+        self.prev = prev;
         self.query.clear();
         self.settings = None;
         self.wide = false;
         self.sel = 0;
         self.refilter();
-        win::show(self.hwnd);
+        #[cfg(windows)]
+        sys::show(self.hwnd);
         window.activate_window();
         window.focus(&self.focus);
     }
 
-    fn on_event(&mut self, ev: win::Event, window: &mut Window, cx: &mut Context<Self>) {
-        match ev {
-            win::Event::Toggle => self.toggle(window),
-            win::Event::Clip(c) => {
-                if let Some(item) = self.store.upsert(&c) {
-                    self.items.retain(|i| i.id != item.id);
-                    self.items.push(item);
-                    self.sort();
-                    self.refilter();
-                }
-            }
+    fn hide(&mut self, window: &mut Window, cx: &mut App) {
+        if !hide_window(self.hwnd, cx) { return }
+        window.remove_window();
+        self.window = None;
+    }
+
+    fn add(&mut self, c: store::NewClip, cx: &mut Context<Self>) {
+        if let Some(item) = self.store.upsert(&c) {
+            self.items.retain(|i| i.id != item.id);
+            self.items.push(item);
+            self.sort();
+            self.refilter();
+            cx.notify();
         }
-        cx.notify();
     }
 
     // ─────────────── actions ───────────────
 
-    fn paste(&mut self, plain: bool) {
+    fn paste(&mut self, plain: bool, window: &mut Window, cx: &mut App) {
         let Some(i) = self.cur() else { return };
-        win::write(self.hwnd, i.kind, &i.text, plain);
-        win::hide(self.hwnd);
-        win::paste_into(self.prev);
+        sys::write(self.hwnd, i.kind, &i.text, plain);
+        self.hide(window, cx);
+        sys::paste_into(self.prev);
     }
 
     fn pin(&mut self, cx: &mut Context<Self>) {
@@ -317,7 +330,7 @@ impl CoBox {
 
     // ─────────────── keyboard ───────────────
 
-    fn on_key(&mut self, e: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+    fn on_key(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         let k = e.keystroke.key.as_str();
         let m = e.keystroke.modifiers;
 
@@ -342,7 +355,7 @@ impl CoBox {
             "up" => self.select(self.sel.saturating_sub(1)),
             "pagedown" => self.select(self.sel + 10),
             "pageup" => self.select(self.sel.saturating_sub(10)),
-            "enter" => self.paste(m.shift),
+            "enter" => self.paste(m.shift, window, cx),
             "tab" => self.set_cat(self.cat + if m.shift { CATS.len() - 1 } else { 1 }),
             "right" => self.wide = true,
             "left" => self.wide = false,
@@ -350,7 +363,7 @@ impl CoBox {
             "escape" => {
                 if self.wide { self.wide = false }
                 else if !self.query.is_empty() { self.query.clear(); self.refilter() }
-                else { win::hide(self.hwnd) }
+                else { self.hide(window, cx) }
             }
             "backspace" => {
                 if m.control { self.query.clear() } else { self.query.pop(); }
@@ -587,10 +600,10 @@ impl CoBox {
             .child(div().w(px(tag_w)).flex_none().text_size(px(small)).text_color(side).child(i.kind.tag()))
             .child(div().flex_1().min_w_0().overflow_hidden().whitespace_nowrap().when(rtl, |d| d.text_right()).child(styled))
             .child(div().flex_none().text_size(px(small)).text_color(side).child(self.clock(i.ts)))
-            .on_click(cx.listener(move |this, e: &ClickEvent, _, cx| {
+            .on_click(cx.listener(move |this, e: &ClickEvent, window, cx| {
                 if this.settings.is_some() { return }
                 this.sel = vi;
-                if e.click_count() >= 2 { this.paste(false) }
+                if e.click_count() >= 2 { this.paste(false, window, cx) }
                 cx.notify();
             }))
             .on_mouse_down(MouseButton::Right, cx.listener(move |this, _: &MouseDownEvent, _, cx| {
@@ -697,10 +710,62 @@ impl CoBox {
     }
 }
 
-// ─────────────────────────────── main ───────────────────────────────
+/// Hide CoBox. Returns whether its window should also be closed (everywhere but Windows).
+fn hide_window(hwnd: isize, cx: &mut App) -> bool {
+    #[cfg(windows)]
+    {
+        let _ = cx;
+        sys::hide(hwnd);
+        false
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = hwnd;
+        cx.hide(); // macOS: hand focus back to the previous app
+        true
+    }
+}
+
+fn open_window(app: &Entity<CoBox>, cx: &mut App) -> Option<WindowHandle<CoBox>> {
+    let bounds = Bounds::centered(None, size(px(W), px(H)), cx);
+    let opts = WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(bounds)),
+        titlebar: None,
+        // Linux pop-ups are notification windows, which don't get the keyboard.
+        kind: if cfg!(target_os = "linux") { WindowKind::Normal } else { WindowKind::PopUp },
+        focus: !cfg!(windows),
+        show: !cfg!(windows),
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        app_id: Some("cobox".into()),
+        window_decorations: Some(gpui::WindowDecorations::Client),
+        ..Default::default()
+    };
+    let view = app.clone();
+    let handle = cx.open_window(opts, move |window, cx| {
+        view.update(cx, |this, cx| this.attach(window, cx));
+        view
+    }).ok()?;
+    app.update(cx, |this, _| this.window = Some(handle));
+    Some(handle)
+}
+
+fn toggle(app: &Entity<CoBox>, cx: &mut App) {
+    let prev = sys::foreground();
+    let existing = app.read(cx).window.and_then(|w| {
+        w.update(cx, |this, window, cx| {
+            // Windows keeps the window around hidden, so "open" means "active" there.
+            if !cfg!(windows) || window.is_window_active() { this.hide(window, cx) } else { this.show(prev, window) }
+        }).ok()
+    });
+    if existing.is_none() && let Some(w) = open_window(app, cx) {
+        w.update(cx, |this, window, _| this.show(prev, window)).ok();
+    }
+}
 
 fn main() {
-    win::single_instance();
+    sys::single_instance();
     let dir = data_dir();
     std::fs::create_dir_all(dir.join("img")).ok();
     let store = Store::open(&dir).expect("cannot open database");
@@ -708,31 +773,20 @@ fn main() {
     Application::new().run(move |cx: &mut App| {
         let (tx, mut rx) = futures::channel::mpsc::unbounded();
         // Register the saved hotkey before the listener starts.
-        win::set_hotkey(store.get("s.hotkey").and_then(|v| v.parse().ok()).unwrap_or(0));
-        win::spawn(tx, dir.join("img"));
+        sys::set_hotkey(store.get("s.hotkey").and_then(|v| v.parse().ok()).unwrap_or(0));
+        sys::spawn(tx, dir.join("img"));
 
-        let bounds = Bounds::centered(None, size(px(W), px(H)), cx);
-        let handle = cx
-            .open_window(
-                WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(bounds)),
-                    titlebar: None,
-                    kind: WindowKind::PopUp,
-                    focus: false,
-                    show: false,
-                    is_movable: false,
-                    is_resizable: false,
-                    is_minimizable: false,
-                    ..Default::default()
-                },
-                |window, cx| cx.new(|cx| CoBox::new(store, window, cx)),
-            )
-            .expect("cannot open window");
+        let app = cx.new(|cx| CoBox::new(store, cx));
+        // Windows: create the (hidden) window now so the first Alt+V is instant.
+        if cfg!(windows) { open_window(&app, cx).expect("cannot open window"); }
 
         // Sleeps until the listener thread sends a clip or the hotkey fires.
         cx.spawn(async move |cx| {
             while let Some(ev) = rx.next().await {
-                handle.update(cx, |this, window, cx| this.on_event(ev, window, cx)).ok();
+                cx.update(|cx| match ev {
+                    sys::Event::Toggle => toggle(&app, cx),
+                    sys::Event::Clip(c) => app.update(cx, |this, cx| this.add(c, cx)),
+                }).ok();
             }
         })
         .detach();

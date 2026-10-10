@@ -1,10 +1,15 @@
 # Builds CoBox for Windows, macOS and Linux and attaches the files to a GitHub release.
 # Run it by pushing a tag: `git tag v0.1.0 && git push origin v0.1.0`.
+# Every other push and pull request only builds, to check all three systems still compile.
 name: release
 
 on:
   push:
     tags: ["v*"]
+    branches: ["**"]
+    paths-ignore: ["site/**", "**.md"]
+  pull_request:
+    paths-ignore: ["site/**", "**.md"]
   workflow_dispatch:
 
 permissions:
