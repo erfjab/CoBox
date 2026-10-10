@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CoBox · clipboard history</title>
+  <meta name="description" content="CoBox is a small, keyboard-first clipboard history for Windows, macOS and Linux. It keeps everything you copy and pastes it back in two keystrokes.">
+  <meta property="og:title" content="CoBox · clipboard history">
+  <meta property="og:description" content="A small, keyboard-first clipboard history for Windows, macOS and Linux.">
+  <meta name="theme-color" content="#16161a">
+  <link rel="icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="#top"><img src="logo.svg" alt="" width="26" height="26"><b>cobox</b></a>
+    <nav>
+      <a href="#demo">demo</a>
+      <a href="#features">features</a>
+      <a href="#keys">keys</a>
+      <a href="#install">install</a>
+      <a href="https://github.com/erfjab/CoBox" class="gh">github ↗</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <canvas id="scene" aria-hidden="true"></canvas>
+      <div class="hero-text">
+        <p class="kicker"><span class="accent">❯</span> clipboard history</p>
+        <h1>Everything you copy,<br><span class="accent">one keystroke away.</span></h1>
+        <p class="lead">CoBox quietly keeps every text, link, image and file you copy. Press <kbd>Alt</kbd>+<kbd>V</kbd>, type a few letters, hit <kbd>Enter</kbd>, and it's pasted.</p>
+        <div class="cta">
+          <a class="btn primary" href="#install">❯ install</a>
+          <a class="btn" href="https://github.com/erfjab/CoBox">source on github</a>
+        </div>
+        <p class="os">windows · macos · linux · free and open source</p>
+      </div>
+    </section>
+
+    <section id="demo" class="demo">
+      <div class="section-head">
+        <h2><span class="dim">──</span> try it</h2>
+        <p>This is CoBox. Type to search, use <kbd>↑</kbd> <kbd>↓</kbd> to move, <kbd>Tab</kbd> to switch type, <kbd>Enter</kbd> to "paste".</p>
+      </div>
+      <div class="app" id="app" tabindex="0" aria-label="Interactive CoBox demo">
+        <div class="app-bar">
+          <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <b>cobox</b>
+          <span class="accent bold">❯</span>
+          <span class="query"><span id="q"></span><span class="caret"></span><span class="placeholder" id="ph">search</span></span>
+          <span class="cats" id="cats"></span>
+        </div>
+        <div class="app-list" id="list"></div>
+        <div class="app-preview" id="preview"></div>
+        <div class="app-status">
+          <span><b>↵</b> paste</span><span><b>tab</b> type</span><span class="hide-sm"><b>→</b> view</span><span class="hide-sm"><b>^p</b> pin</span>
+          <span class="grow"></span>
+          <span id="count"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="section-head">
+        <h2><span class="dim">──</span> what it does</h2>
+      </div>
+      <div class="grid">
+        <article><span class="tag">txt</span><h3>Keeps everything</h3><p>Text, code, links, images, videos, PDFs, audio and files. Your history stays until you delete it.</p></article>
+        <article><span class="tag">key</span><h3>Keyboard first</h3><p>Open, search, pick and paste without touching the mouse. Enter pastes straight into the window you came from.</p></article>
+        <article><span class="tag">cpu</span><h3>Idle means idle</h3><p>The system tells CoBox when something is copied, so it uses almost no CPU while it waits.</p></article>
+        <article><span class="tag">pin</span><h3>Pin what matters</h3><p>Pinned items stay on top and are never cleaned up, whatever history limit you choose.</p></article>
+        <article><span class="tag">pwd</span><h3>Skips passwords</h3><p>Copies that password managers mark as private are ignored.</p></article>
+        <article><span class="tag">rtl</span><h3>Speaks your language</h3><p>Persian, Arabic and Hebrew are shown right to left, the way they're written.</p></article>
+      </div>
+    </section>
+
+    <section id="keys" class="keys">
+      <div class="section-head">
+        <h2><span class="dim">──</span> keys</h2>
+      </div>
+      <div class="keys-grid">
+        <div><kbd>Alt</kbd>+<kbd>V</kbd><span>open CoBox</span></div>
+        <div><kbd>type</kbd><span>search</span></div>
+        <div><kbd>↑</kbd> <kbd>↓</kbd><span>move</span></div>
+        <div><kbd>Enter</kbd><span>paste into the previous window</span></div>
+        <div><kbd>Shift</kbd>+<kbd>Enter</kbd><span>paste as plain text</span></div>
+        <div><kbd>Tab</kbd><span>all, text, link, media, file</span></div>
+        <div><kbd>→</kbd> <kbd>←</kbd><span>big preview / back</span></div>
+        <div><kbd>Ctrl</kbd>+<kbd>P</kbd><span>pin or unpin</span></div>
+        <div><kbd>Del</kbd><span>remove</span></div>
+        <div><kbd>Ctrl</kbd>+<kbd>Z</kbd><span>undo remove</span></div>
+        <div><kbd>Ctrl</kbd>+<kbd>,</kbd><span>settings</span></div>
+        <div><kbd>Esc</kbd><span>clear search, then hide</span></div>
+      </div>
+      <p class="note">On macOS, <kbd>Alt</kbd> is <kbd>Option</kbd>. The open key can be changed in settings.</p>
+    </section>
+
+    <section id="install" class="install">
+      <div class="section-head">
+        <h2><span class="dim">──</span> install</h2>
+        <p>The same command installs CoBox and updates it later. Your history is never touched.</p>
+      </div>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-os="windows" aria-selected="true">windows</button>
+        <button role="tab" data-os="macos" aria-selected="false">macos</button>
+        <button role="tab" data-os="linux" aria-selected="false">linux</button>
+      </div>
+      <div class="term">
+        <div class="term-head"><span id="shell">powershell</span><button class="copy" id="copy">copy</button></div>
+        <pre><span class="accent">❯</span> <code id="cmd"></code></pre>
+      </div>
+      <p class="note" id="os-note"></p>
+    </section>
+  </main>
+
+  <footer>
+    <span><img src="logo.svg" alt="" width="18" height="18"> cobox</span>
+    <span class="dim">made by <a href="https://github.com/erfjab">erfjab</a> · <a href="https://github.com/erfjab/CoBox">github</a></span>
+  </footer>
+
+  <script type="module" src="scene.js"></script>
+  <script src="demo.js"></script>
+</body>
+</html>
