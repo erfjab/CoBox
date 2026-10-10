@@ -138,13 +138,7 @@ h2 { font-size: 22px; margin: 0 0 10px; font-weight: 500; }
 .keys-grid span { margin-left: auto; color: var(--dim); text-align: right; }
 
 /* ── install ── */
-.tabs { display: flex; gap: 4px; margin-bottom: -1px; }
-.tabs button {
-  font: inherit; font-size: 13.5px; color: var(--dim); cursor: pointer;
-  background: none; border: 1px solid transparent; border-bottom: none; padding: 8px 18px; border-radius: 6px 6px 0 0;
-}
-.tabs button[aria-selected="true"] { color: var(--accent); background: var(--panel); border-color: var(--line); }
-.term { background: var(--panel); border: 1px solid var(--line); border-radius: 0 6px 6px 6px; overflow: hidden; }
+.term { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .term-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--faint); }
 .copy { font: inherit; font-size: 12px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 3px 12px; cursor: pointer; }
 .copy:hover { border-color: var(--accent); }
@@ -193,7 +187,6 @@ footer span { display: inline-flex; align-items: center; gap: 8px; }
   .grid article { padding: 22px 18px; }
   .keys-grid div { padding: 12px 0; }
   .term pre { white-space: pre-wrap; word-break: break-all; font-size: 13px; padding: 16px 14px; }
-  .tabs button { flex: 1; padding: 10px 6px; }
   .card { padding: 20px; }
   footer { padding: 28px 16px 40px; flex-direction: column; }
 }

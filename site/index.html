@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CoBox · clipboard history</title>
-  <meta name="description" content="CoBox is a small, keyboard-first clipboard history for Windows, macOS and Linux. It keeps everything you copy and pastes it back in two keystrokes.">
+  <meta name="description" content="CoBox is a small, keyboard-first clipboard history for Windows. It keeps everything you copy and pastes it back in two keystrokes.">
   <meta property="og:title" content="CoBox · clipboard history">
-  <meta property="og:description" content="A small, keyboard-first clipboard history for Windows, macOS and Linux.">
+  <meta property="og:description" content="A small, keyboard-first clipboard history for Windows.">
   <meta name="theme-color" content="#16161a">
   <link rel="icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,7 +32,7 @@
           <a class="btn primary" href="#install">❯ install</a>
           <a class="btn" href="https://github.com/erfjab/CoBox">★ star on github</a>
         </div>
-        <p class="os">windows · macos · linux · free and open source</p>
+        <p class="os">for windows · free and open source</p>
       </div>
     </section>
 
@@ -92,24 +92,19 @@
         <div><kbd>Ctrl</kbd>+<kbd>,</kbd><span>settings</span></div>
         <div><kbd>Esc</kbd><span>clear search, then hide</span></div>
       </div>
-      <p class="note">On macOS, <kbd>Alt</kbd> is <kbd>Option</kbd>. The open key can be changed in settings.</p>
+      <p class="note">The open key can be changed in settings.</p>
     </section>
 
     <section id="install" class="install">
       <div class="section-head">
         <h2><span class="dim">──</span> install</h2>
-        <p>The same command installs CoBox and updates it later. Your history is never touched.</p>
-      </div>
-      <div class="tabs" role="tablist">
-        <button role="tab" data-os="windows" aria-selected="true">windows</button>
-        <button role="tab" data-os="macos" aria-selected="false">macos</button>
-        <button role="tab" data-os="linux" aria-selected="false">linux</button>
+        <p>Run this in PowerShell. The same command installs CoBox and updates it later. Your history is never touched.</p>
       </div>
       <div class="term">
-        <div class="term-head"><span id="shell">powershell</span><button class="copy" id="copy">copy</button></div>
-        <pre><span class="accent">❯</span> <code id="cmd"></code></pre>
+        <div class="term-head"><span>powershell</span><button class="copy" id="copy">copy</button></div>
+        <pre><span class="accent">❯</span> <code id="cmd">irm https://raw.githubusercontent.com/erfjab/CoBox/master/install.ps1 | iex</code></pre>
       </div>
-      <p class="note" id="os-note"></p>
+      <p class="note">Installs to %LOCALAPPDATA%\Programs\CoBox and starts with Windows 10 and 11.</p>
     </section>
 
     <section id="follow" class="follow">

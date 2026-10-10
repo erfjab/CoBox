@@ -1,6 +1,6 @@
-# Builds CoBox for Windows, macOS and Linux and attaches the files to a GitHub release.
+# Builds CoBox for Windows and attaches it to a GitHub release.
 # Run it by pushing a tag: `git tag v0.1.0 && git push origin v0.1.0`.
-# Every other push and pull request only builds, to check all three systems still compile.
+# Every other push and pull request only runs a quick `cargo check` (no optimized build).
 name: release
 
 on:
@@ -15,91 +15,36 @@ on:
 permissions:
   contents: write
 
+# A newer push to the same branch cancels the run that is still going.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: windows-latest, target: x86_64-pc-windows-msvc, name: cobox-windows-x64 }
-          - { os: macos-latest, target: aarch64-apple-darwin, name: cobox-macos-arm64 }
-          - { os: macos-latest, target: x86_64-apple-darwin, name: cobox-macos-x64 }
-          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu, name: cobox-linux-x64 }
-    runs-on: ${{ matrix.os }}
+  check:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.target }}
-
-      - name: Install Linux libraries
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libx11-xcb-dev \
-            libxcb1-dev libfontconfig-dev libfreetype-dev libvulkan-dev libasound2-dev libssl-dev libzstd-dev
-
-      - name: Build
-        run: cargo build --profile dist --target ${{ matrix.target }}
-
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Compress-Archive -Path target/${{ matrix.target }}/dist/cobox.exe -DestinationPath ${{ matrix.name }}.zip
-
-      - name: Package (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          app=CoBox.app/Contents
-          mkdir -p $app/MacOS $app/Resources cobox.iconset
-          cp target/${{ matrix.target }}/dist/cobox $app/MacOS/cobox
-          for s in 16 32 128 256 512; do cp assets/icons/$s.png cobox.iconset/icon_${s}x${s}.png; done
-          for s in 16 128 256; do cp assets/icons/$((s * 2)).png cobox.iconset/icon_${s}x${s}@2x.png; done
-          cp assets/icons/64.png cobox.iconset/icon_32x32@2x.png
-          iconutil -c icns cobox.iconset -o $app/Resources/cobox.icns
-          cat > $app/Info.plist <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-            <key>CFBundleName</key><string>CoBox</string>
-            <key>CFBundleIdentifier</key><string>com.erfjab.cobox</string>
-            <key>CFBundleExecutable</key><string>cobox</string>
-            <key>CFBundleIconFile</key><string>cobox</string>
-            <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>${GITHUB_REF_NAME#v}</string>
-            <key>LSUIElement</key><true/>
-          </dict></plist>
-          PLIST
-          codesign --force --deep -s - CoBox.app
-          tar -czf ${{ matrix.name }}.tar.gz CoBox.app
-
-      - name: Package (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          mkdir cobox
-          cp target/${{ matrix.target }}/dist/cobox assets/icons/256.png cobox/
-          mv cobox/256.png cobox/cobox.png
-          tar -czf ${{ matrix.name }}.tar.gz cobox
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: ${{ matrix.name }}.*
+          shared-key: check
+      - run: cargo check --locked
 
   release:
-    needs: build
     if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
-          merge-multiple: true
+          shared-key: dist
+      - run: cargo build --locked --profile dist
+      - shell: pwsh
+        run: Compress-Archive -Path target/dist/cobox.exe -DestinationPath cobox-windows-x64.zip
       - uses: softprops/action-gh-release@v2
         with:
-          files: cobox-*
+          files: cobox-windows-x64.zip
           generate_release_notes: true

@@ -2,40 +2,26 @@
 
 # CoBox
 
-A small, keyboard-first clipboard history for Windows, macOS and Linux.
+A small, keyboard-first clipboard history for Windows.
 
 Website: https://erfjab.github.io/CoBox/
 
 - Saves everything you copy: text, code, links, images, videos, PDFs, audio and files.
 - Keeps your history until you delete it.
-- Runs in the background and starts when you log in.
+- Runs in the background and starts with Windows.
 - Uses almost no CPU while idle.
 
 ## Install
 
-Windows (PowerShell):
+In PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/erfjab/CoBox/master/install.ps1 | iex
 ```
 
-macOS and Linux:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/erfjab/CoBox/master/install.sh | sh
-```
-
 The same command installs CoBox the first time and updates it later. It only replaces
 the program: your history and settings are never touched. If the download fails, the
 installed version is left as it was.
-
-macOS: the open key is `Option+V`. To paste with `Enter`, allow CoBox in System Settings >
-Privacy & Security > Accessibility. Without it, `Enter` copies the item and you press
-`Cmd+V` yourself.
-
-Linux: the hotkey and paste work on X11, and in X11 apps under Wayland. On Wayland, add a
-keyboard shortcut in your system settings that runs `cobox`: running it again opens the
-copy that is already running.
 
 ## Build from source
 
@@ -126,11 +112,7 @@ Only one CoBox runs at a time. A second copy exits right away.
 | `src/main.rs` | user interface: search, list, preview, settings |
 | `src/store.rs` | history database |
 | `src/win.rs` | Windows parts: clipboard, hotkey, paste, thumbnails, startup |
-| `src/unix.rs` | macOS and Linux shared parts: clipboard reading and writing, single instance |
-| `src/mac.rs` | macOS: hotkey, clipboard watching, paste, login item |
-| `src/linux.rs` | Linux: hotkey, clipboard watching, paste, autostart (X11) |
 | `site/` | website, published to GitHub Pages |
 | `vendor/gpui` | GPUI 0.2.2 with a right-to-left text fix (see `PATCHES.md`) |
 
-Data is stored in `%APPDATA%\cobox` (Windows), `~/Library/Application Support/cobox` (macOS)
-or `~/.local/share/cobox` (Linux).
+Data is stored in `%APPDATA%\cobox`.

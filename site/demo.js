@@ -130,22 +130,7 @@
     new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); play(); } }, { threshold: 0.4 }).observe(app);
   }
 
-  // ── install tabs ──
-  const OS = {
-    windows: { shell: "powershell", cmd: "irm https://raw.githubusercontent.com/erfjab/CoBox/master/install.ps1 | iex", note: "Installs to %LOCALAPPDATA%\\Programs\\CoBox and starts with Windows." },
-    macos: { shell: "terminal", cmd: "curl -fsSL https://raw.githubusercontent.com/erfjab/CoBox/master/install.sh | sh", note: "Installs CoBox.app. To paste with Enter, allow CoBox in System Settings › Privacy & Security › Accessibility." },
-    linux: { shell: "terminal", cmd: "curl -fsSL https://raw.githubusercontent.com/erfjab/CoBox/master/install.sh | sh", note: "Installs to ~/.local/bin. On Wayland, bind a keyboard shortcut to the command cobox to open it." },
-  };
-  const tabs = document.querySelectorAll(".tabs button");
-  const pick = (os) => {
-    tabs.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.os === os)));
-    $("shell").textContent = OS[os].shell;
-    $("cmd").textContent = OS[os].cmd;
-    $("os-note").textContent = OS[os].note;
-  };
-  tabs.forEach((b) => b.addEventListener("click", () => pick(b.dataset.os)));
-  const ua = navigator.userAgent;
-  pick(/Mac/.test(ua) ? "macos" : /Linux|X11/.test(ua) && !/Android/.test(ua) ? "linux" : "windows");
+  // ── install command ──
   $("copy").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("cmd").textContent); $("copy").textContent = "copied"; }
     catch { $("copy").textContent = "select it"; }
