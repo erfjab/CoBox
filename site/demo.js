@@ -32,6 +32,7 @@
     const v = view();
     sel = Math.min(sel, Math.max(0, v.length - 1));
     $("q").textContent = q;
+    if (qi.value !== q) qi.value = q;
     $("ph").style.display = q ? "none" : "";
     $("cats").innerHTML = CATS.map((n, i) => `<span data-cat="${i}" class="${i === cat ? "on" : ""}">${i === cat ? `[${n}]` : n}</span>`).join("");
 
@@ -71,13 +72,19 @@
     timer = setTimeout(() => { toast = null; render(); }, 1600);
   }
 
+  const qi = $("qi");
+  qi.addEventListener("input", () => { q = qi.value; sel = 0; render(); });
+
   app.addEventListener("keydown", (e) => {
     const v = view();
+    // Typing into the real input (phones, or after tapping the prompt) is handled by its input event.
+    const typing = e.target === qi && (e.key.length === 1 || e.key === "Backspace");
+    if (typing) return;
     if (e.key === "ArrowDown") sel = Math.min(sel + 1, v.length - 1);
     else if (e.key === "ArrowUp") sel = Math.max(sel - 1, 0);
     else if (e.key === "Tab") { cat = (cat + (e.shiftKey ? CATS.length - 1 : 1)) % CATS.length; sel = 0; }
     else if (e.key === "Enter") { if (v[sel]) flash(e.shiftKey ? "pasted as plain text" : "pasted"); return e.preventDefault(); }
-    else if (e.key === "Escape") { if (q) { q = ""; } else { app.blur(); } }
+    else if (e.key === "Escape") { if (q) { q = ""; } else { document.activeElement.blur(); } }
     else if (e.key === "Backspace") { q = e.ctrlKey ? "" : q.slice(0, -1); }
     else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { q += e.key; sel = 0; }
     else return;
@@ -85,10 +92,10 @@
     render();
   });
   app.addEventListener("click", (e) => {
-    app.focus({ preventScroll: true });
+    if (e.target !== qi) app.focus({ preventScroll: true });
     const c = e.target.closest("[data-cat]"), r = e.target.closest("[data-vi]");
     if (c) { cat = +c.dataset.cat; sel = 0; }
-    if (r) { sel = +r.dataset.vi; if (e.detail >= 2) flash("pasted"); }
+    if (r) { const vi = +r.dataset.vi; if (vi === sel) { flash("pasted"); return; } sel = vi; }
     render();
   });
 
@@ -96,6 +103,7 @@
   let auto = true;
   const stopAuto = () => { auto = false; };
   app.addEventListener("pointerdown", stopAuto);
+  qi.addEventListener("focus", stopAuto);
   app.addEventListener("keydown", stopAuto, true);
   const script = ["rust", "", "github", ""];
   async function play() {
@@ -144,3 +152,9 @@
     setTimeout(() => { $("copy").textContent = "copy"; }, 1400);
   });
 })();
+
+// GitHub star count on the "star" card (silently skipped if the API is unreachable).
+fetch("https://api.github.com/repos/erfjab/CoBox")
+  .then((r) => (r.ok ? r.json() : null))
+  .then((d) => { if (d && d.stargazers_count >= 0) document.getElementById("stars").textContent = `★ ${d.stargazers_count}`; })
+  .catch(() => {});

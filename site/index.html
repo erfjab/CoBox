@@ -21,27 +21,16 @@
   </script>
 </head>
 <body>
-  <header class="nav">
-    <a class="brand" href="#top"><img src="logo.svg" alt="" width="26" height="26"><b>cobox</b></a>
-    <nav>
-      <a href="#demo">demo</a>
-      <a href="#features">features</a>
-      <a href="#keys">keys</a>
-      <a href="#install">install</a>
-      <a href="https://github.com/erfjab/CoBox" class="gh">github ↗</a>
-    </nav>
-  </header>
-
   <main id="top">
     <section class="hero">
       <canvas id="scene" aria-hidden="true"></canvas>
       <div class="hero-text">
-        <p class="kicker"><span class="accent">❯</span> clipboard history</p>
+        <p class="kicker"><img src="logo.svg" alt="" width="28" height="28"><b>cobox</b><span class="accent">❯</span> clipboard history</p>
         <h1>Everything you copy,<br><span class="accent">one keystroke away.</span></h1>
         <p class="lead">CoBox quietly keeps every text, link, image and file you copy. Press <kbd>Alt</kbd>+<kbd>V</kbd>, type a few letters, hit <kbd>Enter</kbd>, and it's pasted.</p>
         <div class="cta">
           <a class="btn primary" href="#install">❯ install</a>
-          <a class="btn" href="https://github.com/erfjab/CoBox">source on github</a>
+          <a class="btn" href="https://github.com/erfjab/CoBox">★ star on github</a>
         </div>
         <p class="os">windows · macos · linux · free and open source</p>
       </div>
@@ -50,20 +39,21 @@
     <section id="demo" class="demo">
       <div class="section-head">
         <h2><span class="dim">──</span> try it</h2>
-        <p>This is CoBox. Type to search, use <kbd>↑</kbd> <kbd>↓</kbd> to move, <kbd>Tab</kbd> to switch type, <kbd>Enter</kbd> to "paste".</p>
+        <p class="only-kb">This is CoBox. Type to search, use <kbd>↑</kbd> <kbd>↓</kbd> to move, <kbd>Tab</kbd> to switch type, <kbd>Enter</kbd> to "paste".</p>
+        <p class="only-touch">This is CoBox. Tap the search bar and type, tap a type to filter, tap an item to select it and tap it again to "paste".</p>
       </div>
       <div class="app" id="app" tabindex="0" aria-label="Interactive CoBox demo">
         <div class="app-bar">
           <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
           <b>cobox</b>
           <span class="accent bold">❯</span>
-          <span class="query"><span id="q"></span><span class="caret"></span><span class="placeholder" id="ph">search</span></span>
+          <span class="query"><input id="qi" type="text" inputmode="search" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search the demo history"><span id="q"></span><span class="caret"></span><span class="placeholder" id="ph">search</span></span>
           <span class="cats" id="cats"></span>
         </div>
         <div class="app-list" id="list"></div>
         <div class="app-preview" id="preview"></div>
         <div class="app-status">
-          <span><b>↵</b> paste</span><span><b>tab</b> type</span><span class="hide-sm"><b>→</b> view</span><span class="hide-sm"><b>^p</b> pin</span>
+          <span class="only-kb"><b>↵</b> paste</span><span class="only-kb"><b>tab</b> type</span><span class="only-touch"><b>tap twice</b> paste</span><span class="hide-sm"><b>→</b> view</span><span class="hide-sm"><b>^p</b> pin</span>
           <span class="grow"></span>
           <span id="count"></span>
         </div>
@@ -121,11 +111,30 @@
       </div>
       <p class="note" id="os-note"></p>
     </section>
+
+    <section id="follow" class="follow">
+      <div class="section-head">
+        <h2><span class="dim">──</span> stay updated</h2>
+        <p>New versions and news are posted on the Telegram channel. And if CoBox saves you time, don't forget to star it on GitHub, it really helps.</p>
+      </div>
+      <div class="follow-grid">
+        <a class="card" href="https://t.me/Erfjabs">
+          <span class="tag">channel</span>
+          <b>t.me/Erfjabs</b>
+          <span class="dim">follow for updates ↗</span>
+        </a>
+        <a class="card star" href="https://github.com/erfjab/CoBox">
+          <span class="tag">★ star</span>
+          <b>erfjab/CoBox</b>
+          <span class="dim"><span id="stars"></span>don't forget to star ↗</span>
+        </a>
+      </div>
+    </section>
   </main>
 
   <footer>
     <span><img src="logo.svg" alt="" width="18" height="18"> cobox</span>
-    <span class="dim">made by <a href="https://github.com/erfjab">erfjab</a> · <a href="https://github.com/erfjab/CoBox">github</a></span>
+    <span class="dim">made by <a href="https://github.com/erfjab">erfjab</a> · <a href="https://t.me/Erfjabs">telegram</a> · <a href="https://github.com/erfjab/CoBox">github</a></span>
   </footer>
 
   <script type="module" src="scene.js"></script>
